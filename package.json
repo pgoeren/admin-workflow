@@ -13,7 +13,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "init-db": "ts-node scripts/init-firestore.ts"
+    "init-db": "ts-node scripts/init-firestore.ts",
+    "heartbeat": "ts-node scripts/run-heartbeat.ts",
+    "morning-summary": "ts-node scripts/run-morning-summary.ts"
   },
   "keywords": [],
   "author": "",
