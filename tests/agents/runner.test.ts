@@ -24,6 +24,9 @@ jest.mock('@/db/tasks', () => ({
   updateTaskStatus: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/db/firebase', () => ({ getFirestore: jest.fn() }));
+jest.mock('@/token-log/index', () => ({
+  incrementTokenLog: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/agents/trip-scout', () => ({
   runTripScout: jest.fn().mockResolvedValue({ output: 'flights...', tokensUsed: 500, sources: [], successfulSources: [], blockedSources: [] }),
 }));
@@ -44,6 +47,12 @@ describe('runAgent', () => {
       listId: 'price-hunt',
     });
     expect(resultId).toBe('result-123');
+  });
+
+  it('calls incrementTokenLog with agent name and tokens used', async () => {
+    const { incrementTokenLog } = require('@/token-log/index');
+    await runAgent({ taskId: 'task-abc', title: 'Best headphones under $200', listId: 'price-hunt' });
+    expect(incrementTokenLog).toHaveBeenCalledWith('price-hunter', 1500);
   });
 
   it('returns cached result task_id when cache hit', async () => {

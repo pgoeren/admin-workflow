@@ -9,6 +9,7 @@ import { runPriceHunter } from '@/agents/price-hunter';
 import { runTripScout } from '@/agents/trip-scout';
 import { runExperienceFinder } from '@/agents/experience-finder';
 import { runAdminAssist } from '@/agents/admin-assist';
+import { incrementTokenLog } from '@/token-log/index';
 
 const AGENT_MAP: Record<ListId, string> = {
   'price-hunt': 'price-hunter',
@@ -109,6 +110,7 @@ export async function runAgent(input: RunAgentInput): Promise<string> {
       });
       await updateMemoryAfterRun(agentName, agentResult!.successfulSources, agentResult!.blockedSources);
       await setCachedResult(listId, title, resultId, resultPath);
+      await incrementTokenLog(agentName, agentResult!.tokensUsed);
 
       return resultId;
     }
@@ -127,6 +129,7 @@ export async function runAgent(input: RunAgentInput): Promise<string> {
         tokens_used: agentResult!.tokensUsed,
         qa_verdict: QAVerdict.FAIL,
       });
+      await incrementTokenLog(agentName, agentResult!.tokensUsed);
       return resultId;
     }
     // else loop continues for next attempt
