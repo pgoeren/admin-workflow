@@ -46,7 +46,7 @@ export interface AgentMemory {
   successful_sources: string[];
   blocked_sources: string[];
   user_preferences: Record<string, unknown>;
-  last_updated: Timestamp;
+  last_updated: Timestamp | null;
 }
 
 export interface CacheEntry {

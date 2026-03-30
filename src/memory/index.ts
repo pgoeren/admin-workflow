@@ -8,14 +8,20 @@ const DEFAULT_MEMORY: AgentMemory = {
   successful_sources: [],
   blocked_sources: [],
   user_preferences: {},
-  last_updated: null as any,
+  last_updated: null,
 };
 
 export async function loadMemory(agentName: string): Promise<AgentMemory> {
   const db = getFirestore();
   const snap = await db.collection(MEMORY_COLLECTION).doc(agentName).get();
   if (!snap.exists) return { ...DEFAULT_MEMORY };
-  return { ...DEFAULT_MEMORY, ...snap.data() } as AgentMemory;
+  const data = snap.data() ?? {};
+  return {
+    successful_sources: Array.isArray(data['successful_sources']) ? data['successful_sources'] : [],
+    blocked_sources: Array.isArray(data['blocked_sources']) ? data['blocked_sources'] : [],
+    user_preferences: typeof data['user_preferences'] === 'object' && data['user_preferences'] !== null ? data['user_preferences'] : {},
+    last_updated: data['last_updated'] ?? null,
+  };
 }
 
 export async function saveMemory(agentName: string, updates: Partial<AgentMemory>): Promise<void> {
