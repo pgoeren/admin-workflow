@@ -72,17 +72,24 @@ Please search the specified sites and return top 3 results meeting the quality r
   // Extract source URLs from output (simple regex)
   const urlRegex = /https?:\/\/[^\s)]+/g;
   const urls = output.match(urlRegex) ?? [];
-  const sources = urls.map(url => ({
-    url,
-    title: new URL(url).hostname,
-    retrieved_at: new Date(),
-  }));
+  const sources: Array<{ url: string; title: string; retrieved_at: Date }> = [];
+  for (const url of urls) {
+    try {
+      sources.push({ url, title: new URL(url).hostname, retrieved_at: new Date() });
+    } catch {
+      // skip malformed URLs
+    }
+  }
 
   return {
     output,
     tokensUsed,
     sources,
-    successfulSources: ['amazon.com', 'woot.com'],
-    blockedSources: [],
+    successfulSources: sources.map(s => {
+      try { return new URL(s.url).hostname; } catch { return ''; }
+    }).filter(Boolean),
+    blockedSources: memory.blocked_sources.filter(blocked =>
+      sources.some(s => s.url.includes(blocked))
+    ),
   };
 }
