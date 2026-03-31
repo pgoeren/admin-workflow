@@ -4,6 +4,7 @@ import { webhookRouter } from '@/server/webhook';
 import { processHeartbeat } from '@/heartbeat/index';
 import { generateMorningSummary } from '@/discord/morning-summary';
 import { postToDiscord } from '@/discord/delivery';
+import { syncRemindersFromICloud } from '@/reminders/caldav';
 import config from '@/config';
 
 const app = express();
@@ -16,8 +17,13 @@ const server = app.listen(config.port, () => {
   console.log(`Admin workflow server running on port ${config.port}`);
 });
 
-// Heartbeat every 30 minutes
+// Sync iCloud Reminders + run heartbeat every 30 minutes
 cron.schedule('*/30 * * * *', async () => {
+  try {
+    await syncRemindersFromICloud();
+  } catch (err) {
+    console.error('Reminders sync error:', err);
+  }
   try {
     const result = await processHeartbeat();
     if (result?.discordMessage) {

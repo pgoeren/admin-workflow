@@ -23,6 +23,10 @@ const config = {
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY ?? '',
   },
+  icloud: {
+    appleId: process.env.ICLOUD_APPLE_ID ?? '',
+    appPassword: process.env.ICLOUD_APP_PASSWORD ?? '',
+  },
   resultsDir: process.env.RESULTS_DIR ?? `${process.env.HOME}/admin-workflow/results`,
 };
 
