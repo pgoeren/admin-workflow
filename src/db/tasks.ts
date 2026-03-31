@@ -6,6 +6,16 @@ const TASKS_COLLECTION = 'tasks';
 
 export async function createTask(title: string, list_id: ListId): Promise<string> {
   const db = getFirestore();
+
+  // Dedup: skip if an identical pending/queued/running task already exists
+  const existing = await db.collection(TASKS_COLLECTION)
+    .where('title', '==', title)
+    .where('list_id', '==', list_id)
+    .where('status', 'in', [TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING])
+    .limit(1)
+    .get();
+  if (!existing.empty) return existing.docs[0].id;
+
   const doc = await db.collection(TASKS_COLLECTION).add({
     title,
     list_id,
