@@ -14,8 +14,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "init-db": "ts-node scripts/init-firestore.ts",
-    "heartbeat": "ts-node scripts/run-heartbeat.ts",
-    "morning-summary": "ts-node scripts/run-morning-summary.ts"
+    "heartbeat": "ts-node -r tsconfig-paths/register scripts/run-heartbeat.ts",
+    "morning-summary": "ts-node -r tsconfig-paths/register scripts/run-morning-summary.ts"
   },
   "keywords": [],
   "author": "",
@@ -36,6 +36,7 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^6.0.2"
   }
 }
