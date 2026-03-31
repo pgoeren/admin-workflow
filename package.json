@@ -8,12 +8,12 @@
   },
   "scripts": {
     "start": "node dist/src/server/index.js",
-    "dev": "ts-node src/server/index.ts",
+    "dev": "ts-node -r tsconfig-paths/register src/server/index.ts",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "init-db": "ts-node scripts/init-firestore.ts",
+    "init-db": "ts-node -r tsconfig-paths/register scripts/init-firestore.ts",
     "heartbeat": "ts-node -r tsconfig-paths/register scripts/run-heartbeat.ts",
     "morning-summary": "ts-node -r tsconfig-paths/register scripts/run-morning-summary.ts"
   },
