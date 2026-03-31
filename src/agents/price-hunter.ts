@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { getClaudeClient, MODELS } from '@/claude';
 import { TaskClassification } from '@/agents/classifier';
 import { AgentMemory } from '@/db/schema';
@@ -10,9 +11,9 @@ interface AgentResult {
   blockedSources: string[];
 }
 
-const PRICE_HUNTER_PROMPT = `You are PriceHunter, a product research agent. You use web browsing to find the best value products.
+const PRICE_HUNTER_PROMPT = `You are PriceHunter, a product research agent. Use the web_search tool to find the best value products.
 
-Research the requested product across these sites (in parallel if possible):
+Research the requested product across these sites:
 1. Amazon — filter: ≥4.0 stars, ≥50 reviews REQUIRED
 2. Brand's official website (if identifiable from the product)
 3. Etsy (if the item could be artisan/unique)
@@ -49,7 +50,7 @@ export async function runPriceHunter(input: {
   const { title, classification, memory } = input;
   const client = getClaudeClient();
 
-  const prompt = PRICE_HUNTER_PROMPT
+  const systemPrompt = PRICE_HUNTER_PROMPT
     .replace('{BLOCKED_SOURCES}', memory.blocked_sources.join(', ') || 'none')
     .replace('{USER_PREFERENCES}', JSON.stringify(memory.user_preferences));
 
@@ -57,37 +58,65 @@ export async function runPriceHunter(input: {
 ${classification.params.budget ? `Budget: $${classification.params.budget}` : ''}
 ${classification.params.keywords ? `Keywords: ${(classification.params.keywords as string[]).join(', ')}` : ''}
 
-Please search the specified sites and return top 3 results meeting the quality requirements.`;
+Search the web and return top 3 results meeting the quality requirements.`;
 
-  const response = await client.messages.create({
-    model: MODELS.SONNET,
-    max_tokens: 4096,
-    system: prompt,
-    messages: [{ role: 'user', content: userMessage }],
-  });
+  const messages: Anthropic.Beta.BetaMessageParam[] = [
+    { role: 'user', content: userMessage },
+  ];
 
-  const output = response.content[0].type === 'text' ? response.content[0].text : 'No results found.';
-  const tokensUsed = response.usage.input_tokens + response.usage.output_tokens;
+  const tools: Anthropic.Beta.BetaTool[] = [
+    { type: 'web_search_20250305' as any, name: 'web_search' } as any,
+  ];
 
-  // Extract source URLs from output (simple regex)
-  const urlRegex = /https?:\/\/[^\s)]+/g;
-  const urls = output.match(urlRegex) ?? [];
+  let output = '';
+  let totalTokens = 0;
   const sources: Array<{ url: string; title: string; retrieved_at: Date }> = [];
-  for (const url of urls) {
-    try {
-      sources.push({ url, title: new URL(url).hostname, retrieved_at: new Date() });
-    } catch {
-      // skip malformed URLs
+
+  // Agentic loop — keep going until end_turn
+  while (true) {
+    const response = await (client as any).beta.messages.create({
+      model: MODELS.SONNET,
+      max_tokens: 4096,
+      system: systemPrompt,
+      tools,
+      messages,
+    });
+
+    totalTokens += (response.usage?.input_tokens ?? 0) + (response.usage?.output_tokens ?? 0);
+
+    // Collect text output and web search results
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        output += block.text;
+      } else if (block.type === 'web_search_tool_result') {
+        const results = Array.isArray(block.content) ? block.content : [];
+        for (const result of results) {
+          if (result.type === 'web_search_result' && result.url) {
+            sources.push({
+              url: result.url,
+              title: result.title ?? result.url,
+              retrieved_at: new Date(),
+            });
+          }
+        }
+      }
     }
+
+    if (response.stop_reason === 'end_turn') break;
+
+    // Continue the loop with the assistant's response
+    messages.push({ role: 'assistant', content: response.content });
   }
 
+  const successfulSources = sources.map(s => {
+    try { return new URL(s.url).hostname; } catch { return ''; }
+  }).filter(Boolean);
+
   return {
-    output,
-    tokensUsed,
+    output: output || 'No results found.',
+    tokensUsed: totalTokens,
     sources,
-    successfulSources: sources.map(s => {
-      try { return new URL(s.url).hostname; } catch { return ''; }
-    }).filter(Boolean),
+    successfulSources,
     blockedSources: memory.blocked_sources.filter(blocked =>
       sources.some(s => s.url.includes(blocked))
     ),
