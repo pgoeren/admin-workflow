@@ -18,6 +18,7 @@ const config = {
   discord: {
     botToken: process.env.DISCORD_BOT_TOKEN ?? '',
     channelId: process.env.DISCORD_CHANNEL_ID ?? '',
+    webhookUrl: process.env.DISCORD_WEBHOOK_URL ?? '',
   },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY ?? '',
