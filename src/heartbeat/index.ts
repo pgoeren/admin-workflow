@@ -19,13 +19,23 @@ export async function claimNextTask(): Promise<Task | null> {
   const snapshot = await db
     .collection(TASKS_COLLECTION)
     .where('status', 'in', [TaskStatus.PENDING, TaskStatus.QUEUED])
-    .orderBy('status', 'asc')
-    .orderBy('created_at', 'asc')
     .get();
 
   const now = Date.now();
 
-  for (const doc of snapshot.docs) {
+  // Sort in memory: queued first, then pending; within each group by created_at asc
+  const sorted = snapshot.docs.slice().sort((a, b) => {
+    const aData = a.data() as Task;
+    const bData = b.data() as Task;
+    if (aData.status !== bData.status) {
+      return aData.status === TaskStatus.QUEUED ? -1 : 1;
+    }
+    const aTime = aData.created_at?.toDate().getTime() ?? 0;
+    const bTime = bData.created_at?.toDate().getTime() ?? 0;
+    return aTime - bTime;
+  });
+
+  for (const doc of sorted) {
     const data = doc.data() as Task;
     const lockTime = data.heartbeat_lock ? data.heartbeat_lock.toDate().getTime() : null;
     const lockExpired = lockTime === null || now - lockTime > LOCK_TIMEOUT_MS;
