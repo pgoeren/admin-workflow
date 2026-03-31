@@ -29,8 +29,8 @@ cron.schedule('*/30 * * * *', async () => {
   }
 });
 
-// Morning summary at 7:03am UTC daily
-cron.schedule('3 7 * * *', async () => {
+// Morning summary at 7:03am MST (14:03 UTC) daily
+cron.schedule('3 14 * * *', async () => {
   try {
     const message = await generateMorningSummary();
     await postToDiscord(message);
